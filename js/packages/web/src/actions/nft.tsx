@@ -18,6 +18,7 @@ import {
   getAssetCostToStore,
   ARWEAVE_UPLOAD_ENDPOINT
 } from '@oyster/common';
+import { NFTStorage } from 'nft.storage';
 import React, { Dispatch, SetStateAction } from 'react';
 import { MintLayout, Token } from '@solana/spl-token';
 import {
@@ -70,6 +71,42 @@ const uploadToArweave = async (data: FormData): Promise<IArweaveResult> => {
 
   return result;
 };
+
+//To test if nft.storage works with metaplex
+const uploadToNFTStorage = async (
+  files: File[],
+  metadata:any,
+  IPFSMetadata: Record<string, any>)=> {
+  // if (!process.env.REACT_APP_NFT_STORAGE_KEY) {
+  //   return Promise.reject(
+  //     new Error(
+  //       'REACT_APP_NFT_STORAGE_KEY is missing. Please provide the API key in the .env file.'
+  //     )
+  //   );
+  // }
+  const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDY5YzcyOTcwNjRBNTA2ZTFiZjA4QjhGZmVBNjhjMzU4NTIwZTJBOEYiLCJpc3MiOiJuZnQtc3RvcmFnZSIsImlhdCI6MTYyNTczMjQ4MTc5NSwibmFtZSI6Ik5GVC5UZXN0In0.lO1AQkBl9NqqPudcn7_69ASWjBPrp7fzGqDqS-N4dXc'
+  const client = new NFTStorage({ token: apiKey })
+
+  // const nftMetadata = await client.store({
+  //   name: metadata.name,
+  //   description: metadata.description,
+  //   image: files[0]
+  // })
+  const imageFile = files.find(f => f.name.endsWith('.png'));
+  if (imageFile == null) {
+    throw new Error('unable to find image file from input path: ');
+  }
+  const nftCid = await client.storeBlob(imageFile);
+  console.log(nftCid)
+
+  const result = await IPFSMetadata.json();
+
+  if (result.error) {
+    return Promise.reject(new Error(result.error.message));
+  }
+
+  return result;
+}
 
 export const mintNFT = async (
   connection: Connection,
@@ -240,6 +277,8 @@ export const mintNFT = async (
   // TODO: convert to absolute file name for image
 
   const result: IArweaveResult = await uploadToArweave(data);
+  const nftResult = await uploadToNFTStorage(realFiles,metadata,metadataContent);
+  console.log(nftResult);
   progressCallback(6);
 
   const metadataFile = result.messages?.find(
